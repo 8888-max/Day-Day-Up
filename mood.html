@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心情记录</title>
+
+<style>
+:root{
+    --orange:#ff6900;
+    --blue:#4facfe;
+    --purple:#9b59ff;
+    --bg:#f6f8fb;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+}
+
+body{
+    background:linear-gradient(135deg,#eef2f7,#e4ecff);
+    padding:40px 20px;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+}
+
+.header{
+    font-size:32px;
+    font-weight:600;
+    margin-bottom:30px;
+    color:#333;
+}
+
+.card{
+    background:#fff;
+    padding:25px;
+    border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+    margin-bottom:30px;
+}
+
+input,select,textarea{
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid #ddd;
+    margin-top:10px;
+    margin-bottom:15px;
+    font-size:14px;
+}
+
+button{
+    padding:8px 18px;
+    border:none;
+    border-radius:20px;
+    background:var(--orange);
+    color:#fff;
+    cursor:pointer;
+    margin-right:5px;
+    transition:0.3s;
+}
+
+button:hover{
+    opacity:0.85;
+}
+
+.tag{
+    display:inline-block;
+    padding:6px 14px;
+    border-radius:20px;
+    margin:5px 5px 0 0;
+    font-size:13px;
+    cursor:pointer;
+    background:var(--blue);
+    color:#fff;
+}
+
+.tag.active{
+    background:var(--orange);
+}
+
+.mood-item{
+    padding:18px;
+    border-radius:12px;
+    margin-bottom:15px;
+    background:#fff;
+    border-left:6px solid var(--purple);
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+.mood-time{
+    font-size:12px;
+    color:#888;
+    margin-top:6px;
+}
+
+.actions{
+    margin-top:10px;
+}
+
+.edit-btn{background:var(--blue);}
+.delete-btn{background:#e74c3c;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">心情记录</div>
+
+<div class="card">
+    <textarea id="content" placeholder="记录今天的心情..."></textarea>
+    <select id="typeSelect"></select>
+    <button onclick="addOrUpdateMood()">保存</button>
+
+    <hr style="margin:25px 0;">
+
+    <input type="text" id="newType" placeholder="新增类型">
+    <button onclick="addType()">新增类型</button>
+</div>
+
+<div id="filterTags"></div>
+<br>
+<div id="moodList"></div>
+
+</div>
+
+<script>
+let moods = JSON.parse(localStorage.getItem("moods")||"[]");
+let types = JSON.parse(localStorage.getItem("types")||'["开心","难过","焦虑"]');
+let currentFilter = "全部";
+let editIndex = null;
+
+function save(){
+    localStorage.setItem("moods",JSON.stringify(moods));
+    localStorage.setItem("types",JSON.stringify(types));
+}
+
+function init(){
+    updateTypeSelect();
+    updateFilterTags();
+    render();
+}
+
+function updateTypeSelect(){
+    let select=document.getElementById("typeSelect");
+    select.innerHTML="";
+    types.forEach(t=>{
+        select.innerHTML+=`<option value="${t}">${t}</option>`;
+    });
+}
+
+function updateFilterTags(){
+    let box=document.getElementById("filterTags");
+    box.innerHTML="";
+    ["全部",...types].forEach(t=>{
+        box.innerHTML+=`
+        <span class="tag ${currentFilter===t?'active':''}"
+        onclick="filterType('${t}')">${t}</span>`;
+    });
+}
+
+function addOrUpdateMood(){
+    let content=document.getElementById("content").value;
+    let type=document.getElementById("typeSelect").value;
+    if(!content)return alert("请输入内容");
+
+    let time=new Date().toLocaleString();
+
+    if(editIndex===null){
+        moods.unshift({content,type,time});
+    }else{
+        moods[editIndex]={content,type,time};
+        editIndex=null;
+    }
+
+    document.getElementById("content").value="";
+    save();
+    render();
+}
+
+function addType(){
+    let newType=document.getElementById("newType").value;
+    if(!newType)return;
+    if(!types.includes(newType)){
+        types.push(newType);
+    }
+    document.getElementById("newType").value="";
+    save();
+    updateTypeSelect();
+    updateFilterTags();
+}
+
+function filterType(t){
+    currentFilter=t;
+    updateFilterTags();
+    render();
+}
+
+function deleteMood(index){
+    if(confirm("确定删除？")){
+        moods.splice(index,1);
+        save();
+        render();
+    }
+}
+
+function editMood(index){
+    let mood=moods[index];
+    document.getElementById("content").value=mood.content;
+    document.getElementById("typeSelect").value=mood.type;
+    editIndex=index;
+}
+
+function render(){
+    let list=document.getElementById("moodList");
+    list.innerHTML="";
+    moods.forEach((m,i)=>{
+        if(currentFilter==="全部"||m.type===currentFilter){
+            list.innerHTML+=`
+            <div class="mood-item">
+                <div>${m.content}</div>
+                <div class="mood-time">${m.type} · ${m.time}</div>
+                <div class="actions">
+                    <button class="edit-btn" onclick="editMood(${i})">修改</button>
+                    <button class="delete-btn" onclick="deleteMood(${i})">删除</button>
+                </div>
+            </div>`;
+        }
+    });
+}
+
+init();
+</script>
+</body>
+</html>
